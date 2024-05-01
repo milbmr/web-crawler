@@ -16,8 +16,7 @@ func main() {
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
-	}
+		log.Fatal(err) }
 	res.Body.Close()
   crawler.Parser(body)
 }

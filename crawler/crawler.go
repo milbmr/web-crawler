@@ -1,34 +1,25 @@
 package crawler
 
 import (
-	"bytes"
-	"fmt"
+	"io"
 	"log"
-	"strings"
-
-	"golang.org/x/net/html"
+	"net/http"
 )
 
-func Parser(page []byte) {
-	doc, err := html.Parse(bytes.NewReader(page))
+func Crawler(baseUrl string, depth int, found chan string) {
+	if depth <= 0 {
+		return
+	}
+
+	res, err := http.Get("https://yts.mx/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	var f func(*html.Node)
-	f = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "a" {
-			for _, a := range n.Attr {
-				if a.Key == "href" {
-					if strings.HasPrefix(a.Val, "http") {
-						fmt.Println(a.Val)
-					}
-					break
-				}
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			f(c)
-		}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
 	}
-	f(doc)
+	res.Body.Close()
+	Parser(body)
 }
