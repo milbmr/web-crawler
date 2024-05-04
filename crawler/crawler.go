@@ -6,21 +6,34 @@ import (
 	"net/http"
 )
 
-func Crawler(done <-chan interface{}, baseUrl string, depth int, urlStream <-chan string) {
+func Crawl(done <-chan interface{}, depth int, urlStream string, out chan string) {
 	if depth <= 0 {
 		return
 	}
 
-  urls := make(chan string)
-	html := getHtml(done, urlStream)
-	Parser(done, html)
+	visited := make(map[string]bool)
+	if visited[urlStream] {
+		return
+	}
+
+	html := getHtml(done, urlStream, visited)
+	u := GenerateUrls(done, html)
+	go Crawl(done, depth-1, <-u, out)
+
+	for {
+		select {
+		case <-done:
+			return
+		}
+	}
 }
 
-func getHtml(done <-chan interface{}, urlStream <-chan string) <-chan []byte {
+func getHtml(done <-chan interface{}, urlStream string, visited map[string]bool) <-chan []byte {
+	visited[urlStream] = true
 	html := make(chan []byte)
 	go func() {
 		defer close(html)
-		res, err := http.Get(<-urlStream)
+		res, err := http.Get(urlStream)
 		if err != nil {
 			log.Fatal(err)
 		}
