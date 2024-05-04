@@ -6,20 +6,36 @@ import (
 	"net/http"
 )
 
-func Crawler(baseUrl string, depth int, found chan string) {
+func Crawler(done <-chan interface{}, baseUrl string, depth int, urlStream <-chan string) {
 	if depth <= 0 {
 		return
 	}
 
-	res, err := http.Get("https://yts.mx/")
-	if err != nil {
-		log.Fatal(err)
-	}
+  urls := make(chan string)
+	html := getHtml(done, urlStream)
+	Parser(done, html)
+}
 
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	res.Body.Close()
-	Parser(body)
+func getHtml(done <-chan interface{}, urlStream <-chan string) <-chan []byte {
+	html := make(chan []byte)
+	go func() {
+		defer close(html)
+		res, err := http.Get(<-urlStream)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		res.Body.Close()
+		select {
+		case <-done:
+			return
+		case html <- body:
+		}
+	}()
+
+	return html
 }
