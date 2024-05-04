@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 )
 
 func Crawl(done <-chan interface{}, depth int, urlStream string, out chan string) {
@@ -12,11 +13,17 @@ func Crawl(done <-chan interface{}, depth int, urlStream string, out chan string
 	}
 
 	visited := make(map[string]bool)
-	if visited[urlStream] {
+	var mux sync.Mutex
+
+	mux.Lock()
+	if ok := visited[urlStream]; !ok {
+		visited[urlStream] = true
+		mux.Unlock()
+	} else {
 		return
 	}
 
-	html := getHtml(done, urlStream, visited)
+	html := getHtml(done, urlStream)
 	u := GenerateUrls(done, html)
 	go Crawl(done, depth-1, <-u, out)
 
@@ -24,12 +31,13 @@ func Crawl(done <-chan interface{}, depth int, urlStream string, out chan string
 		select {
 		case <-done:
 			return
+		case val := <-u:
+			out <- val
 		}
 	}
 }
 
-func getHtml(done <-chan interface{}, urlStream string, visited map[string]bool) <-chan []byte {
-	visited[urlStream] = true
+func getHtml(done <-chan interface{}, urlStream string) <-chan []byte {
 	html := make(chan []byte)
 	go func() {
 		defer close(html)

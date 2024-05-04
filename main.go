@@ -9,14 +9,9 @@ import (
 )
 
 func main() {
-	res, err := http.Get("https://yts.mx/")
-	if err != nil {
-		log.Fatal(err)
-	}
+  url := make(chan string)
+  done := make(chan interface{})
+  defer close(done)
 
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		log.Fatal(err) }
-	res.Body.Close()
-  crawler.Parser(body)
+  crawler.Crawl()
 }
