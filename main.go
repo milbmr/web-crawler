@@ -12,20 +12,20 @@ func main() {
 	url := make(chan string)
 	done := make(chan interface{})
 	defer close(done)
-	w.Add(2)
-	defer w.Done()
-	go crawler.Crawl(done, 2, "http://golang.org/", url, &w, fetcher)
-
+	w.Add(1)
 	go func() {
 		defer w.Done()
-		for u := range url {
-			fmt.Println(u)
-		}
+		crawler.Crawl(done, 3, "http://golang.org/", url, &w, fetcher)
 	}()
 
-	w.Wait()
-  fmt.Println("exe")
-	close(url)
+	go func() {
+		w.Wait()
+		close(url)
+	}()
+
+	for u := range url {
+		fmt.Println(u)
+	}
 }
 
 type fakeFetcher map[string]*fakeResult

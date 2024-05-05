@@ -16,7 +16,6 @@ type Fetcher interface {
 }
 
 func Crawl(done <-chan interface{}, depth int, urlStream string, out chan string, w *sync.WaitGroup, fetcher Fetcher) {
-	defer w.Done()
 	if depth <= 0 {
 		return
 	}
@@ -62,8 +61,11 @@ func Crawl(done <-chan interface{}, depth int, urlStream string, out chan string
 	// 	}
 	// }
 	for url := range u {
-    w.Add(1)
-		go Crawl(done, depth-1, url, out, w, fetcher)
+		w.Add(1)
+		go func() {
+			defer w.Done()
+			Crawl(done, depth-1, url, out, w, fetcher)
+		}()
 		out <- url
 	}
 }
